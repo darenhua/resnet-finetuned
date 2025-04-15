@@ -109,7 +109,7 @@ def main():
         else "cpu"
     )
     print(f"Using {device} device")
-    processor = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
+    processor = AutoImageProcessor.from_pretrained("microsoft/resnet-50", use_fast=True)
     training_data = TrainingData(image_labels)
 
     resnet = AutoModelForImageClassification.from_pretrained("microsoft/resnet-50")
