@@ -5,6 +5,7 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
+import torch
 import torch.nn as nn
 import torch.optim as optim
 import os
@@ -41,7 +42,13 @@ class TrainingData(Dataset):
 
 
 def train_model(
-    processor, model, criterion, optimizer, training_dataset, num_epochs=25
+    processor,
+    model,
+    criterion,
+    optimizer,
+    training_dataset,
+    device="cpu",
+    num_epochs=25,
 ):
     # for a bunch of epochs (which are iterations until all training data is used)
     # train_dataset = Subset(training_dataset, range(1000))
@@ -51,6 +58,10 @@ def train_model(
         avg_loss = 0
         for images, actual_labels in training_dataloader:
             inputs = processor(images=images, return_tensors="pt")
+
+            inputs = inputs.to(device)
+            actual_labels = actual_labels.to(device)
+
             predicted_label_logits = model(inputs)
             # predicted_label_indices = predicted_label_logits.argmax(1)
             loss = criterion(predicted_label_logits, actual_labels)
@@ -92,17 +103,25 @@ def main():
             image_path = os.path.join(path, "train", class_name, image_name)
             image_labels.append((image_path, label_to_index[class_name]))
 
+    device = (
+        torch.accelerator.current_accelerator().type
+        if torch.accelerator.is_available()
+        else "cpu"
+    )
+    print(f"Using {device} device")
+
     processor = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
     training_data = TrainingData(image_labels)
 
     resnet = AutoModelForImageClassification.from_pretrained("microsoft/resnet-50")
     model = FineTunedResnet(resnet, labels, num_classes=len(labels))
+    model = model.to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     model = train_model(
-        processor, model, criterion, optimizer, training_data, num_epochs=25
+        processor, model, criterion, optimizer, training_data, device, num_epochs=25
     )
 
     image = Image.open(path + "/train/angry/Training_10118481.jpg")
