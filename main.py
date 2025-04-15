@@ -57,10 +57,9 @@ def train_model(
         training_dataloader = DataLoader(training_dataset, batch_size=64, shuffle=True)
         avg_loss = 0
         for images, actual_labels in training_dataloader:
-            inputs = processor(images=images, return_tensors="pt")
 
-            inputs = inputs.to(device)
-            actual_labels = actual_labels.to(device)
+            inputs = processor(images=images, return_tensors="pt")
+            inputs = {k: v.to(device) for k, v in inputs.items()}
 
             predicted_label_logits = model(inputs)
             # predicted_label_indices = predicted_label_logits.argmax(1)
@@ -73,7 +72,6 @@ def train_model(
 
         avg_loss /= len(training_dataloader)
         print(f"Epoch {epoch} loss: {avg_loss}")
-        training_dataloader.dataset.shuffle()
 
     return model
 
@@ -103,13 +101,13 @@ def main():
             image_path = os.path.join(path, "train", class_name, image_name)
             image_labels.append((image_path, label_to_index[class_name]))
 
-    device = (
-        torch.accelerator.current_accelerator().type
-        if torch.accelerator.is_available()
-        else "cpu"
-    )
-    print(f"Using {device} device")
-
+    # device = (
+    #     torch.accelerator.current_accelerator().type
+    #     if torch.accelerator.is_available()
+    #     else "cpu"
+    # )
+    # print(f"Using {device} device")
+    device = "cpu"
     processor = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
     training_data = TrainingData(image_labels)
 
