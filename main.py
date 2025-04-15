@@ -52,6 +52,8 @@ def train_model(
 ):
     # for a bunch of epochs (which are iterations until all training data is used)
     # train_dataset = Subset(training_dataset, range(1000))
+    best_model_params_path = os.path.join(os.getcwd(), "best_model_params.pt")
+    print(best_model_params_path)
 
     for epoch in range(num_epochs):
         training_dataloader = DataLoader(training_dataset, batch_size=64, shuffle=True)
@@ -75,6 +77,7 @@ def train_model(
         avg_loss /= len(training_dataloader)
         print(f"Epoch {epoch} loss: {avg_loss}")
 
+    torch.save(model.state_dict(), best_model_params_path)
     return model
 
     # for each data point
