@@ -57,6 +57,8 @@ def train_model(
         training_dataloader = DataLoader(training_dataset, batch_size=64, shuffle=True)
         avg_loss = 0
         for images, actual_labels in training_dataloader:
+            # Move labels to device
+            actual_labels = actual_labels.to(device)
 
             inputs = processor(images=images, return_tensors="pt")
             inputs = {k: v.to(device) for k, v in inputs.items()}
@@ -101,13 +103,12 @@ def main():
             image_path = os.path.join(path, "train", class_name, image_name)
             image_labels.append((image_path, label_to_index[class_name]))
 
-    # device = (
-    #     torch.accelerator.current_accelerator().type
-    #     if torch.accelerator.is_available()
-    #     else "cpu"
-    # )
-    # print(f"Using {device} device")
-    device = "cpu"
+    device = (
+        torch.accelerator.current_accelerator().type
+        if torch.accelerator.is_available()
+        else "cpu"
+    )
+    print(f"Using {device} device")
     processor = AutoImageProcessor.from_pretrained("microsoft/resnet-50")
     training_data = TrainingData(image_labels)
 
@@ -122,16 +123,16 @@ def main():
         processor, model, criterion, optimizer, training_data, device, num_epochs=25
     )
 
+    # For inference
     image = Image.open(path + "/train/angry/Training_10118481.jpg")
     image = image.convert("RGB")
-
     inputs = processor(images=image, return_tensors="pt")
+    inputs = {k: v.to(device) for k, v in inputs.items()}  # Move inputs to device
 
-    outputs = model(**inputs)
+    outputs = model(inputs)
     logits = outputs.logits
-    # model predicts one of the 1000 ImageNet classes
     predicted_class_idx = logits.argmax(-1).item()
-    print("Predicted class:", model.config.id2label[predicted_class_idx])
+    print("Predicted class:", model.output_labels[predicted_class_idx])
 
 
 if __name__ == "__main__":
